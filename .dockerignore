@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.idea
+datasets
+household-1
+household-pruned
+runs
+uploads
+outputs
+*.pt
+*.zip

@@ -1,3 +1,13 @@
+---
+title: MoveVision AI
+emoji: 📦
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+app_file: app.py
+pinned: false
+---
+
 # MoveVision AI: Smart Household Inventory and Relocation Estimator
 
 MoveVision AI is an AI-powered computer vision application that detects household items from room photos or videos, converts the detections into an editable moving inventory, estimates total volume and weight, recommends a suitable truck, and generates a relocation cost report.
@@ -228,6 +238,35 @@ The app will start locally, usually at:
 http://localhost:8501
 ```
 
+## Deployment Notes
+
+The project is prepared for Linux cloud deployment with CPU inference. Model weights are not committed to GitHub. Before deploying, provide the model in one of two ways:
+
+- Place `household_v2_best.pt` at `weights/household_v2_best.pt`
+- Set `MOVEVISION_MODEL_URL` to a direct download URL so the app can download weights on startup
+
+### Streamlit / Hugging Face Spaces
+
+The repository includes Hugging Face Spaces metadata in this README and uses `app.py` as the Streamlit entry point.
+
+### Docker
+
+```bash
+docker build -t movevision-ai .
+docker run -p 7860:7860 -e MOVEVISION_MODEL_URL="<model-download-url>" movevision-ai
+```
+
+### FastAPI
+
+```bash
+uvicorn fastapi_server:app --host 0.0.0.0 --port 8000
+```
+
+API endpoints:
+
+- `GET /health`
+- `POST /estimate`
+
 ## Important Files
 
 | File | Purpose |
@@ -236,6 +275,11 @@ http://localhost:8501
 | `detector.py` | YOLO image/video detection, tracking, duplicate suppression, confidence summary |
 | `estimator.py` | Item metadata, class mapping, volume and weight calculation, truck recommendation |
 | `quote.py` | Relocation quote calculation logic |
+| `pricing_config.yaml` | Editable pricing, truck, box, surcharge, and distance configuration |
+| `pricing.py` | Pricing config loader with fallback defaults |
+| `correction_logger.py` | Human correction logger for future retraining data |
+| `fastapi_server.py` | API wrapper exposing image-to-estimate inference |
+| `report_generator.py` | ReportLab PDF report generator |
 | `train.py` | Model training script |
 | `train_pruned.py` | Training script for pruned household classes |
 | `merge_datasets.py` | Dataset merge utility |

@@ -3,6 +3,8 @@
 
 import re
 
+from pricing import get_truck_options
+
 
 # Raw model labels from weights/household_v2_best.pt that are useful for moving inventory.
 # Labels for fixed room parts, food, and tiny non-inventory clutter are ignored below.
@@ -221,12 +223,7 @@ INVENTORY_ITEMS = sorted(
 )
 
 
-TRUCK_OPTIONS = [
-    {"name": "Tata Ace",             "capacity": 150, "base_cost": 8000},
-    {"name": "Tata 407",             "capacity": 400, "base_cost": 15000},
-    {"name": "Eicher Pro 2049 Plus", "capacity": 600, "base_cost": 22000},
-    {"name": "Eicher Pro 2110 7S",   "capacity": 900, "base_cost": 30000},
-]
+TRUCK_OPTIONS = get_truck_options()
 
 
 def get_truck_recommendation(total_volume):

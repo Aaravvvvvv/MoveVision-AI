@@ -17,10 +17,12 @@ weights/*.pt
 # Uploads and generated outputs
 uploads/*
 outputs/*
+corrections.jsonl
 
 # Python cache
 __pycache__/
 *.pyc
+*.zip
 
 # PyCharm
 .idea/

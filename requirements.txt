@@ -1,10 +1,14 @@
-numpy<2
-opencv-python==4.9.0.80
-ultralytics
-streamlit
-pandas
-fpdf2
-pyyaml
+--extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install PyTorch separately with CUDA support:
-# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+numpy>=2.0,<3
+opencv-python-headless>=4.10.0.84
+torch>=2.3
+torchvision>=0.18
+ultralytics>=8.3
+streamlit>=1.36
+pandas>=2.2
+reportlab>=4.2
+pyyaml>=6.0
+fastapi>=0.111
+uvicorn[standard]>=0.30
+pillow>=10.4

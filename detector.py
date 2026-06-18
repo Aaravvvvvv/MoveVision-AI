@@ -2,7 +2,9 @@
 # Handles video/image processing and YOLO object detection.
 
 from collections import Counter
+import os
 from pathlib import Path
+from urllib.request import urlretrieve
 
 import cv2
 from ultralytics import YOLO
@@ -10,11 +12,38 @@ from ultralytics import YOLO
 from estimator import INVENTORY_ITEMS, canonical_inventory_item
 
 
-MODEL_PATH = Path(__file__).resolve().parent / "weights" / "household_v2_best.pt"
-model = YOLO(str(MODEL_PATH))
+MODEL_PATH = Path(
+    os.getenv(
+        "MOVEVISION_MODEL_PATH",
+        Path(__file__).resolve().parent / "weights" / "household_v2_best.pt",
+    )
+)
+MODEL_URL = os.getenv("MOVEVISION_MODEL_URL")
+model = None
 
 # Exported for the Streamlit inventory editor.
 HOUSEHOLD_ITEMS = set(INVENTORY_ITEMS)
+
+
+def get_model():
+    """Load the YOLO model lazily, with optional cloud download support."""
+    global model
+    if model is not None:
+        return model
+
+    if not MODEL_PATH.exists() and MODEL_URL:
+        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        print(f"Downloading model weights to {MODEL_PATH}...")
+        urlretrieve(MODEL_URL, MODEL_PATH)
+
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Model weights not found at {MODEL_PATH}. "
+            "Place household_v2_best.pt in weights/ or set MOVEVISION_MODEL_URL."
+        )
+
+    model = YOLO(str(MODEL_PATH))
+    return model
 
 
 def confidence_level(confidence):
@@ -95,10 +124,10 @@ def _is_duplicate_detection(candidate, kept_detection):
     return False
 
 
-def _inventory_detections(result, frame, confidence):
+def _inventory_detections(result, frame, confidence, model_obj):
     detections = []
     for box in result.boxes:
-        raw_label = model.names[int(box.cls)]
+        raw_label = model_obj.names[int(box.cls)]
         item_name = canonical_inventory_item(raw_label)
         conf_score = float(box.conf)
 
@@ -171,10 +200,11 @@ def process_video(video_path, frame_interval=30, confidence=0.25, imgsz=960,
     fps = cap.get(cv2.CAP_PROP_FPS)
     duration = round(total_frames / fps, 1) if fps > 0 else 0
     print(f"Video loaded: {total_frames} frames, {fps:.1f} fps, {duration}s duration")
+    model_obj = get_model()
 
     # Reset tracker state from any previous video
-    if hasattr(model, "predictor") and model.predictor is not None:
-        model.predictor = None
+    if hasattr(model_obj, "predictor") and model_obj.predictor is not None:
+        model_obj.predictor = None
 
     # {tracker_id: canonical_item_name}  — one entry per unique object
     tracked_objects = {}
@@ -188,7 +218,7 @@ def process_video(video_path, frame_interval=30, confidence=0.25, imgsz=960,
             break
 
         if frame_number % frame_interval == 0:
-            results = model.track(
+            results = model_obj.track(
                 frame,
                 persist=True,
                 tracker="bytetrack.yaml",
@@ -203,7 +233,7 @@ def process_video(video_path, frame_interval=30, confidence=0.25, imgsz=960,
             # results.boxes.id is None when no tracks are found
             if results.boxes.id is not None:
                 for box in results.boxes:
-                    raw_label = model.names[int(box.cls)]
+                    raw_label = model_obj.names[int(box.cls)]
                     item_name = canonical_inventory_item(raw_label)
                     conf_score = float(box.conf)
                     track_id = int(box.id)
@@ -276,7 +306,8 @@ def process_image(image_path, confidence=0.25, imgsz=960, return_details=False):
     if frame is None:
         raise ValueError(f"Could not open image: {image_path}")
 
-    results = model(
+    model_obj = get_model()
+    results = model_obj(
         frame,
         verbose=False,
         conf=confidence,
@@ -286,7 +317,7 @@ def process_image(image_path, confidence=0.25, imgsz=960, return_details=False):
     detected = {}
     confidences_by_item = {}
 
-    for detection in _inventory_detections(results, frame, confidence):
+    for detection in _inventory_detections(results, frame, confidence, model_obj):
         item_name = detection["item"]
         detected[item_name] = detected.get(item_name, 0) + 1
         confidences_by_item.setdefault(item_name, []).append(detection["confidence"])

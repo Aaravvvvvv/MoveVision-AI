@@ -5,11 +5,23 @@ import re
 import tempfile
 
 import cv2
-import numpy as np
 import pandas as pd
 import streamlit as st
-from fpdf import FPDF
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+
+class FPDF:
+    """Compatibility stub for the old unused PDF helper block."""
+    pass
+
+from correction_logger import log_inventory_corrections
 from detector import HOUSEHOLD_ITEMS, MODEL_PATH, process_image, process_video
 from estimator import summarise_items
 import estimator as _estimator
@@ -421,6 +433,10 @@ if "room_frames" not in st.session_state:
     st.session_state.room_frames = {}
 if "room_confidence" not in st.session_state:
     st.session_state.room_confidence = {}
+if "room_sources" not in st.session_state:
+    st.session_state.room_sources = {}
+if "logged_correction_ids" not in st.session_state:
+    st.session_state.logged_correction_ids = set()
 if "scan_done" not in st.session_state:
     st.session_state.scan_done = False
 
@@ -475,6 +491,8 @@ if clear_scan:
     st.session_state.room_inventory = {}
     st.session_state.room_frames = {}
     st.session_state.room_confidence = {}
+    st.session_state.room_sources = {}
+    st.session_state.logged_correction_ids = set()
     st.session_state.scan_done = False
     st.rerun()
 
@@ -487,6 +505,7 @@ if run_scan:
         new_inventory = {}
         new_frames = {}
         new_confidence = {}
+        new_sources = {}
         total_files = len(uploaded_files)
 
         for file_idx, uploaded_file in enumerate(uploaded_files):
@@ -540,6 +559,10 @@ if run_scan:
             for item, count in detected_items.items():
                 new_inventory[room][item] = new_inventory[room].get(item, 0) + count
 
+            new_sources.setdefault(room, [])
+            if uploaded_file.name not in new_sources[room]:
+                new_sources[room].append(uploaded_file.name)
+
             if room not in new_confidence:
                 new_confidence[room] = {}
             for item, stats in confidence_summary.items():
@@ -555,6 +578,7 @@ if run_scan:
         st.session_state.room_inventory = new_inventory
         st.session_state.room_frames = new_frames
         st.session_state.room_confidence = new_confidence
+        st.session_state.room_sources = new_sources
         st.session_state.scan_done = True
         st.rerun()
 
@@ -641,6 +665,16 @@ with tab_inventory:
                     key=f"editor_{room_name}",
                 )
                 edited_items = editor_frame_to_items(edited_df)
+                source_names = ", ".join(st.session_state.room_sources.get(room_name, []))
+                logged_count = log_inventory_corrections(
+                    df,
+                    edited_df,
+                    room=room_name,
+                    image_filename=source_names,
+                    seen_event_ids=st.session_state.logged_correction_ids,
+                )
+                if logged_count:
+                    st.caption(f"Saved {logged_count} correction(s) for future retraining.")
                 if edited_items:
                     edited_room_inventory[room_name] = edited_items
 
@@ -665,6 +699,9 @@ with tab_inventory:
 
 
 # ── Tab 2: Estimate ──────────────────────────────────────────────────
+from report_generator import generate_report_pdf
+
+
 with tab_estimate:
     st.subheader("Moving Cost Estimate")
 
