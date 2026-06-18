@@ -1,0 +1,41 @@
+# Virtual environment
+.venv/
+venv/
+
+# Datasets (too large for GitHub)
+datasets/
+household-1/
+household-pruned/
+
+# Training runs (checkpoints, huge)
+runs/
+
+# Model weights (too large, track separately)
+*.pt
+weights/*.pt
+
+# Uploads and generated outputs
+uploads/*
+outputs/*
+
+# Python cache
+__pycache__/
+*.pyc
+
+# PyCharm
+.idea/
+
+# Scratch / local-only scripts
+main.py
+resume.py
+test.py.ipynb
+dwnld_dataset.py
+
+# Test images
+test_*.jpg
+test_*.jpeg
+test_*.png
+output_*.jpg
+output_*.png
+myroom.jpeg
+bus.jpg
