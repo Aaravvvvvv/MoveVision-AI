@@ -12,7 +12,7 @@ pinned: false
 
 MoveVision AI is an AI-powered computer vision application that detects household items from room photos or videos, converts the detections into an editable moving inventory, estimates total volume and weight, recommends a suitable truck, and generates a relocation cost report.
 
-The project was built as an end-to-end applied AI system rather than only a model demo. It combines object detection, custom class mapping, inventory estimation, quote calculation, manual review, and PDF report generation inside a Streamlit interface.
+The project was built as an end-to-end applied AI system rather than only a model demo. It combines object detection, custom class mapping, inventory estimation, YAML-driven pricing, correction feedback logging, quote calculation, ReportLab PDF generation, a Streamlit interface, and a FastAPI wrapper for API-based inference.
 
 ## Problem Statement
 
@@ -36,12 +36,39 @@ MoveVision AI attempts to automate the first layer of this workflow by allowing 
 - Duplicate suppression for image detections
 - Room-wise inventory grouping
 - Human-in-the-loop correction using editable Streamlit tables
+- Correction feedback logging to JSONL for future retraining
 - Confidence review labels: High, Review, and Low
 - Volume and weight estimation using item metadata
-- Truck recommendation based on total volume buffer
-- Relocation quote calculation using route, floor, lift, fragile items, boxes, and packing cost
-- PDF estimate report generation
+- Config-driven pricing using `pricing_config.yaml`
+- Truck recommendation and relocation quote calculation using route, floor, lift, fragile items, boxes, and packing cost
+- Unicode-safe ReportLab PDF estimate report generation
+- FastAPI `/estimate` endpoint for programmatic image-to-quote inference
+- Docker and Hugging Face Spaces deployment configuration
 - Packing tips for fragile and high-care items
+
+## Architecture
+
+```text
+Image / Video Upload
+        |
+        v
+YOLO Detector + ByteTrack
+        |
+        v
+Confidence Review + Editable Inventory
+        |
+        +----> correction_logger.py -> corrections.jsonl
+        |
+        v
+estimator.py -> volume, weight, truck recommendation
+        |
+        v
+pricing_config.yaml + quote.py -> relocation quote
+        |
+        +----> report_generator.py -> PDF report
+        |
+        +----> fastapi_server.py -> JSON API response
+```
 
 ## Screenshots
 
@@ -81,9 +108,11 @@ MoveVision AI attempts to automate the first layer of this workflow by allowing 
 5. Duplicate detections are reduced for images; video detections use ByteTrack tracking IDs.
 6. Each detected item receives a confidence summary.
 7. The user reviews and edits the generated room-wise inventory.
-8. The estimator calculates total volume, total weight, fragile count, and truck requirement.
-9. The quote engine generates a relocation cost range.
-10. The app exports a PDF report containing inventory, quote, packing tips, and terms.
+8. Any changed item name or count is logged to `corrections.jsonl` for future retraining.
+9. The estimator calculates total volume, total weight, fragile count, and truck requirement.
+10. The quote engine loads prices from `pricing_config.yaml` and generates a relocation cost range.
+11. The app exports a ReportLab PDF report containing inventory, quote, packing tips, and terms.
+12. The same detection and quote flow is also available through the FastAPI `/estimate` endpoint.
 
 ## Model Training Summary
 
