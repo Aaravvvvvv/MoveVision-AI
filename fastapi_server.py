@@ -1,9 +1,10 @@
 import base64
+import os
 import tempfile
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from detector import MODEL_PATH, process_image
@@ -31,6 +32,18 @@ class EstimateRequest(BaseModel):
     box_type: str = "light"
 
 
+def verify_api_key(x_api_key: Optional[str] = Header(default=None)):
+    expected_key = os.getenv("MOVEVISION_API_KEY")
+    if not expected_key:
+        raise HTTPException(
+            status_code=401,
+            detail="MOVEVISION_API_KEY is not configured on the server",
+        )
+    if x_api_key != expected_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return True
+
+
 @app.get("/health")
 def health():
     return {
@@ -40,7 +53,7 @@ def health():
     }
 
 
-@app.post("/estimate")
+@app.post("/estimate", dependencies=[Depends(verify_api_key)])
 def estimate(payload: EstimateRequest):
     try:
         image_bytes = base64.b64decode(payload.image_base64, validate=True)

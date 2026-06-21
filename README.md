@@ -14,6 +14,17 @@ MoveVision AI is an AI-powered computer vision application that detects househol
 
 The project was built as an end-to-end applied AI system rather than only a model demo. It combines object detection, custom class mapping, inventory estimation, YAML-driven pricing, correction feedback logging, quote calculation, ReportLab PDF generation, a Streamlit interface, and a FastAPI wrapper for API-based inference.
 
+## Model Performance
+
+Evaluated on a 101-class household object dataset with 971 test images and 13,147 labeled objects.
+
+| Metric | Score |
+| --- | --- |
+| mAP@50 | 91.7% |
+| Precision | 95.3% |
+| Recall | 88.8% |
+| Classes above 0.5 AP | 94 / 101 |
+
 ## Problem Statement
 
 Moving companies usually need a manual survey to estimate household inventory, truck size, packing material, labor, and approximate relocation cost. This process is slow, inconsistent, and dependent on human inspection.
@@ -295,6 +306,18 @@ API endpoints:
 
 - `GET /health`
 - `POST /estimate`
+
+Protect the estimate endpoint by setting an API key:
+
+```bash
+set MOVEVISION_API_KEY=your-secret-key
+```
+
+Requests to `POST /estimate` must include:
+
+```text
+X-API-Key: your-secret-key
+```
 
 ## Important Files
 
